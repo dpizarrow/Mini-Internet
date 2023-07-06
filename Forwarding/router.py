@@ -18,7 +18,8 @@ class Router:
             port (int): Port of the router
             table_path (str): Path to the routing table file
             color: Color for the router prints. Default is white
-        """        
+        """
+
         self.ip = ip
         self.port = int(port)
         self.table_path = table_path
@@ -70,11 +71,27 @@ class Router:
         return f"{parsed_packet['IP']},{parsed_packet['Port']},{parsed_packet['Message']}"
     
     def read_routing_table(self) -> None:
+
+        """
+        Read the routing table file and fill the route_list
+        """   
+
         with open(self.table_path, 'r') as f:
             self.route_list = f.readlines()
             self.route_list = [x.strip() for x in self.route_list]
 
     def check_routes(self, ip: str, port: int) -> bool:
+
+        """_
+        Check if there is a route to the destination address. Uses round-robin to select the next hop
+
+        Args:
+            ip (str): IP of the destination
+            port (int): Port of the destination
+        Returns:
+            bool: True if there is a route, False otherwise
+        """ 
+
         for route in self.route_list:
             route = route.split(' ')
             

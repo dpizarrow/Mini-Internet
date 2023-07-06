@@ -20,7 +20,8 @@ class Router:
             port (int): Port of the router
             table_path (str): Path to the routing table file
             color: Color for the router prints. Default is white
-        """        
+        """
+
         self.ip = ip
         self.port = int(port)
         self.table_path = table_path
@@ -110,7 +111,8 @@ class Router:
 
         Returns:
             str: Message with the format BGP_ROUTES Port ASN1 ASN2 ASN ... END_ROUTES
-        """        
+        """
+
         bgp_message = 'BGP_ROUTES\n'
         bgp_message += f'{self.port}\n'
         for route in self.route_list:
@@ -128,7 +130,8 @@ class Router:
 
         Returns:
             list: List of neighbors with the format (IP, Port)
-        """        
+        """
+
         neighbors = []
         for route in self.route_list:
             route = route.split(' ')
@@ -145,7 +148,8 @@ class Router:
 
         Returns:
             list: List of BGP routes with the format [ASN1, ASN2, ASN, ...]
-        """        
+        """
+
         bgp_message = bgp_message.split('\n')
         bgp_message = bgp_message[2:-1]
         bgp_message = [x.split(' ') for x in bgp_message]
@@ -162,7 +166,8 @@ class Router:
 
         Returns:
             str: IP Packet with the START_BGP message
-        """        
+        """ 
+               
         start_bgp_message = {
             'IP': neighbor[0],
             'Port': neighbor[1],
@@ -370,24 +375,35 @@ class Router:
 
     def forward_packet(self, packet: dict, forward_address: tuple) -> None:
             
-            """
-            Forward a packet to the next hop
-    
-            Args:
-                packet (dict): Packet to forward
-            """        
-    
-            # Create a packet from the dictionary
+        """
+        Forward a packet to the next hop
 
-            packet['TTL'] -= 1
+        Args:
+            packet (dict): Packet to forward
+        """        
 
-            packet = self.create_packet(packet)
-    
+        # Create a packet from the dictionary
 
-            # Send the packet to the next hop
-            self.sock.sendto(packet.encode(), forward_address)
+        packet['TTL'] -= 1
+
+        packet = self.create_packet(packet)
+
+
+        # Send the packet to the next hop
+        self.sock.sendto(packet.encode(), forward_address)
 
     def fragment_IP_packet(self, packet: dict, mtu: int) -> list:
+
+        """
+        Fragment an IP packet if it's larger than the MTU
+
+        Args:
+            packet (dict): Packet to fragment
+            mtu (int): MTU of the network
+        Returns:
+            list: List of fragments
+        """
+
         packet_str = self.create_packet(packet)
         packet_size = len(packet_str.encode())
         packet_list = packet_str.split(',')
@@ -435,49 +451,55 @@ class Router:
         return fragments
        
     def reassemble_IP_packet(self, fragments: list) -> dict:
-        
-        # # For each fragment, convert it to a list
 
-        # if len(fragments) == 1 and ''.join(fragments[0])[6] == '0':
-        #     # print(f'Only 1 fragment')
-        #     to_ret = ''.join(fragments[0])
-        #     return self.parse_packet(to_ret.encode())
-            
-        
-        # else:
-        
-            fragments = [fragment.split(',') for fragment in fragments]
-            
-            # Sort the fragments by offset
+        """
+        Reassemble an IP packet from a list of fragments
 
-            fragments.sort(key=lambda x: int(x[4]))
+        Args:
+            fragments (list): List of fragments
+        Returns:
+            dict: Reassembled packet
+        """           
+    
+        fragments = [fragment.split(',') for fragment in fragments]
+        
+        # Sort the fragments by offset
 
-            cur_offset = 0
-            message = ""
-            cur_size = 0
-            if (int(fragments[0][4]) != 0):
+        fragments.sort(key=lambda x: int(x[4]))
+
+        cur_offset = 0
+        message = ""
+        cur_size = 0
+        if (int(fragments[0][4]) != 0):
+            return None
+        if (int(fragments[-1][6]) != 0):
+            return None
+        
+        print_with_color(f'Reassembling {len(fragments)} fragments', self.color)
+
+        
+        for fragment in fragments:
+            if int(fragment[4]) != cur_offset:
                 return None
-            if (int(fragments[-1][6]) != 0):
-                return None
-            
-            print_with_color(f'Reassembling {len(fragments)} fragments', self.color)
-            # print(f'First fragment: {fragments[0]}')
-            # print(f'Last fragment: {fragments[-1]}')
-            
-            for fragment in fragments:
-                if int(fragment[4]) != cur_offset:
-                    return None
-                message += fragment[7]
-                cur_offset += int(fragment[5])
-                cur_size += int(fragment[5])
-            
-            ret_packet = fragments[0][0:7]
-            ret_packet.append(message)
-            ret_packet[5] = str(cur_size).zfill(8)
-            ret_packet = ','.join(ret_packet)
-            return self.parse_packet(ret_packet.encode())
+            message += fragment[7]
+            cur_offset += int(fragment[5])
+            cur_size += int(fragment[5])
+        
+        ret_packet = fragments[0][0:7]
+        ret_packet.append(message)
+        ret_packet[5] = str(cur_size).zfill(8)
+        ret_packet = ','.join(ret_packet)
+        return self.parse_packet(ret_packet.encode())
         
     def add_packet_to_dict(self, packet):
+
+        """
+        Add a packet to the fragment dictionary based on its ID
+
+        Args:
+            packet (dict): Packet to add
+        """        
+
         if packet['ID'] not in self.fragment_dict:
             self.fragment_dict[packet['ID']] = [self.create_packet(packet)]
         else:
@@ -490,8 +512,6 @@ class Router:
         """        
 
         # Wait in a loop for packets
-
-        neighbors = self.get_neighbors()
 
         while True:
             packet, _ = self.sock.recvfrom(1024)
@@ -526,8 +546,4 @@ if __name__ == "__main__":
     r = Router(ip, port, table_path)
 
     r.run()
-
-    # r = Router('127.0.0.1', 8881, 'rutas/rutas_R1_v3_mtu.txt')
-    # print(r.route_list)
-    # print(r.asn_list)
     

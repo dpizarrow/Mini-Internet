@@ -18,7 +18,8 @@ class Router:
             port (int): Port of the router
             table_path (str): Path to the routing table file
             color: Color for the router prints. Default is white
-        """        
+        """
+
         self.ip = ip
         self.port = int(port)
         self.table_path = table_path
@@ -76,11 +77,27 @@ class Router:
         return ','.join([str(v) for v in parsed_packet.values()])
     
     def read_routing_table(self) -> None:
+    
+        """
+        Read the routing table file and fill the route_list
+        """
+
         with open(self.table_path, 'r') as f:
             self.route_list = f.readlines()
             self.route_list = [x.strip() for x in self.route_list]
 
     def check_routes(self, ip: str, port: int) -> tuple:
+
+        """_
+        Check if there is a route to the destination address. Uses round-robin to select the next hop
+
+        Args:
+            ip (str): IP of the destination
+            port (int): Port of the destination
+        Returns:
+            bool: True if there is a route, False otherwise
+        """   
+
         for route in self.route_list:
             route = route.split(' ')
             
@@ -101,24 +118,35 @@ class Router:
 
     def forward_packet(self, packet: dict, forward_address: tuple) -> None:
             
-            """
-            Forward a packet to the next hop
-    
-            Args:
-                packet (dict): Packet to forward
-            """        
-    
-            # Create a packet from the dictionary
+        """
+        Forward a packet to the next hop
 
-            packet['TTL'] -= 1
+        Args:
+            packet (dict): Packet to forward
+        """        
 
-            packet = self.create_packet(packet)
-    
+        # Create a packet from the dictionary
 
-            # Send the packet to the next hop
-            self.sock.sendto(packet.encode(), forward_address)
+        packet['TTL'] -= 1
+
+        packet = self.create_packet(packet)
+
+
+        # Send the packet to the next hop
+        self.sock.sendto(packet.encode(), forward_address)
 
     def fragment_IP_packet(self, packet: dict, mtu: int) -> list:
+
+        """
+        Fragment an IP packet if it's larger than the MTU
+
+        Args:
+            packet (dict): Packet to fragment
+            mtu (int): MTU of the network
+        Returns:
+            list: List of fragments
+        """
+
         packet_str = self.create_packet(packet)
         packet_size = len(packet_str.encode())
         packet_list = packet_str.split(',')
@@ -167,48 +195,53 @@ class Router:
        
     def reassemble_IP_packet(self, fragments: list) -> dict:
         
-        # # For each fragment, convert it to a list
+        """
+        Reassemble an IP packet from a list of fragments
 
-        # if len(fragments) == 1 and ''.join(fragments[0])[6] == '0':
-        #     # print(f'Only 1 fragment')
-        #     to_ret = ''.join(fragments[0])
-        #     return self.parse_packet(to_ret.encode())
-            
+        Args:
+            fragments (list): List of fragments
+        Returns:
+            dict: Reassembled packet
+        """   
+
+        fragments = [fragment.split(',') for fragment in fragments]
         
-        # else:
+        # Sort the fragments by offset
+
+        fragments.sort(key=lambda x: int(x[4]))
+
+        cur_offset = 0
+        message = ""
+        cur_size = 0
+        if (int(fragments[0][4]) != 0):
+            return None
+        if (int(fragments[-1][6]) != 0):
+            return None
         
-            fragments = [fragment.split(',') for fragment in fragments]
-            
-            # Sort the fragments by offset
-
-            fragments.sort(key=lambda x: int(x[4]))
-
-            cur_offset = 0
-            message = ""
-            cur_size = 0
-            if (int(fragments[0][4]) != 0):
+        print_with_color(f'Reassembling {len(fragments)} fragments', self.color)
+        
+        for fragment in fragments:
+            if int(fragment[4]) != cur_offset:
                 return None
-            if (int(fragments[-1][6]) != 0):
-                return None
-            
-            print_with_color(f'Reassembling {len(fragments)} fragments', self.color)
-            # print(f'First fragment: {fragments[0]}')
-            # print(f'Last fragment: {fragments[-1]}')
-            
-            for fragment in fragments:
-                if int(fragment[4]) != cur_offset:
-                    return None
-                message += fragment[7]
-                cur_offset += int(fragment[5])
-                cur_size += int(fragment[5])
-            
-            ret_packet = fragments[0][0:7]
-            ret_packet.append(message)
-            ret_packet[5] = str(cur_size).zfill(8)
-            ret_packet = ','.join(ret_packet)
-            return self.parse_packet(ret_packet.encode())
+            message += fragment[7]
+            cur_offset += int(fragment[5])
+            cur_size += int(fragment[5])
+        
+        ret_packet = fragments[0][0:7]
+        ret_packet.append(message)
+        ret_packet[5] = str(cur_size).zfill(8)
+        ret_packet = ','.join(ret_packet)
+        return self.parse_packet(ret_packet.encode())
         
     def add_packet_to_dict(self, packet):
+
+        """
+        Add a packet to the fragment dictionary based on its ID
+
+        Args:
+            packet (dict): Packet to add
+        """    
+
         if packet['ID'] not in self.fragment_dict:
             self.fragment_dict[packet['ID']] = [self.create_packet(packet)]
         else:
@@ -239,15 +272,11 @@ class Router:
                 # If the packet is for the router, print it
 
                 if packet['IP'] == self.ip and packet['Port'] == self.port:
-                    # print_with_color(f"Message from {packet['IP']}:{packet['Port']}: {packet['Message']}", self.color)
                     self.add_packet_to_dict(packet)
                     reassembled_packet = self.reassemble_IP_packet(self.fragment_dict[packet['ID']])
-                    # print_with_color(f"Reassembled packet {reassembled_packet}", self.color)
                     if reassembled_packet:
                         print_with_color(f"Reassembled packet {reassembled_packet['Message']}", self.color)
                         del self.fragment_dict[packet['ID']]
-                    # else:
-                    #     continue         
 
                 else:
 
@@ -272,22 +301,12 @@ class Router:
 
                         print_with_color(f"No routes found to {packet['IP']}:{packet['Port']}", self.color)
 
-
 if __name__ == "__main__":
-    # ip = sys.argv[1]
-    # port = sys.argv[2]
-    # table_path = sys.argv[3]
-    # r = Router(ip, port, table_path)
-    # print(r.route_list)
-    # r.run()
-
-    r = Router("127.0.0.1", "8885", "rutas/rutas_R1_v3_mtu.txt")
-
-    test_packet = "127.0.0.1,8885,10,347,0,00000005,0,hola!"
-    test_packet = r.parse_packet(test_packet.encode())
-    fragments = r.fragment_IP_packet(test_packet, 38)
-    print(fragments)
-    print(r.reassemble_IP_packet(fragments))
+    ip = sys.argv[1]
+    port = sys.argv[2]
+    table_path = sys.argv[3]
+    r = Router(ip, port, table_path)
+    r.run()
     
 
 
