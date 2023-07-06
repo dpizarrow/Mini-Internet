@@ -30,7 +30,7 @@ IP,Port,TTL,Message
 
 ## Fragmentation
 
-This folder adds IP packet fragmentation on top of the forwarding already implemented. To do this, the routing tables are modified to include the Maximum Transmission Unit (MTU) between two routers. The idea is that if we try to forward from one router to another with packet whose size in bytes is larger than the MTU of that link, that packet must first be fragmented. Once the packet is fragmented, each fragment is sent to the destination router, and this router is in charge of reassembling the fragments. 
+This folder adds IP packet fragmentation on top of the forwarding already implemented. To do this, the routing tables are modified to include the Maximum Transmission Unit (MTU) between two routers. The idea is that if we try to forward a packet from one router to another whose size in bytes is larger than the MTU of that link, that packet must first be fragmented. Once the packet is fragmented, each fragment is sent to the destination router, and this router is in charge of reassembling the fragments. 
 
 For this part, the router structure is as follows:
 
