@@ -58,7 +58,7 @@ This part of the project implements the Border Gateway Protocol (BGP). In this r
 [Initial IP] [AS Route] [Hop IP] [Hop Port] [MTU]
 ```
 
-Here `AS Route` is of variable length, and indicates the route we would have to take to go from one AS to another and are in reverse order. For example, the AS route `8885 8883 8882 8881` would tell us that to go from AS 8881 to AS 8885, we would have to take the route `8881 -> 8882 -> 8883 -> 8884 -> 8885`. Considering this, the BGP algorithm runs as follows. 
+Here `AS Route` is of variable length, and indicates the route we would have to take to go from one AS to another and are in reverse order. For example, the AS route `8885 8883 8882 8881` would tell us that to go from AS 8881 to AS 8885, we would have to take the route `8881 -> 8882 -> 8883 -> 8885`. Considering this, the BGP algorithm runs as follows. 
 
 1. First we send a START_BGP message to a router indicating that the BGP algorithm will start. This message is sent to the routers neighbors. 
 
@@ -81,6 +81,6 @@ The first and last lines denote the start and end of a BGP message, the second l
 
 5. This whole process is repeated until all of the routing tables stop changing. A 10 second timeout is set for each router, and after the timeout expires we can assume that no more routes will be sent and the BGP algorithm has ended.
 
-After running BGP, the new routing tables are written to text files with the name `BGP_AS.txt`. These routing tables are then used to handle IP packet forwarding as described. 
+After running BGP, the new routing tables are written to text files with the name `BGP_[AS].txt`. These routing tables are then used to handle IP packet forwarding as described in the Forwarding section.
 
 To run the routers we use `netcat` as described previously. To start the BGP algorithm we send a message to any router with the message `START_BGP`. Once we send this message we must wait until we see messages saying `wrote routing table to ...` for each router. Once that happens we can send messages from any router to any other as seen previously.
