@@ -44,7 +44,7 @@ To run the routers with fragmentation, run `python run_all.py <NUM_ROUTERS>` pas
 IP,Port,TTL,ID,Offset,Size,Flag,Message
 ```
 
-Here ID is a random integer, and Offset and Flag should be set to 0. The Size value corresponds to the size of the message in bytes, and should always be 8 digits. For example, if our message was 300 bytes long, the Size would be 00000300. If we wanted to send the message 'hello!' from router 1 to router 5, we would first run `netcat -u 127.0.0.1 8881` and then send the message
+Here ID is a random integer, and Offset and Flag should be set to 0 when sending messages with `netcat`. The routers modify these values internally when fragmenting packets. The Size value corresponds to the size of the message in bytes, and should always be 8 digits. For example, if our message was 300 bytes long, the Size would be 00000300. If we wanted to send the message 'hello!' from router 1 to router 5, we would first run `netcat -u 127.0.0.1 8881` and then send the message
 
 ```
 127.0.0.1,8885,10,347,0,00000006,0,hello!
